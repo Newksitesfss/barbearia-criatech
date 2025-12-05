@@ -1,4 +1,5 @@
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { relations } from "drizzle-orm";
 
 /**
  * Core user table backing auth flow.
@@ -12,7 +13,9 @@ export const users = mysqlTable("users", {
    */
   id: int("id").autoincrement().primaryKey(),
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  openId: varchar("openId", { length: 64 }).unique(), // Tornando opcional para permitir login local
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  salt: varchar("salt", { length: 255 }),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
@@ -25,11 +28,18 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+export const userRelations = relations(users, ({ many }) => ({
+  barbers: many(barbers),
+  haircuts: many(haircuts),
+  appointments: many(appointments),
+}));
+
 /**
  * Tabela de barbeiros
  */
 export const barbers = mysqlTable("barbers", {
   id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 320 }),
@@ -41,11 +51,20 @@ export const barbers = mysqlTable("barbers", {
 export type Barber = typeof barbers.$inferSelect;
 export type InsertBarber = typeof barbers.$inferInsert;
 
+export const barberRelations = relations(barbers, ({ one, many }) => ({
+  user: one(users, {
+    fields: [barbers.userId],
+    references: [users.id],
+  }),
+  appointments: many(appointments),
+}));
+
 /**
  * Tabela de tipos de cortes
  */
 export const haircuts = mysqlTable("haircuts", {
   id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
   name: varchar("name", { length: 255 }).notNull(),
   price: int("price").notNull(), // Preço em centavos para evitar problemas com decimais
   description: text("description"),
@@ -57,13 +76,22 @@ export const haircuts = mysqlTable("haircuts", {
 export type Haircut = typeof haircuts.$inferSelect;
 export type InsertHaircut = typeof haircuts.$inferInsert;
 
+export const haircutRelations = relations(haircuts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [haircuts.userId],
+    references: [users.id],
+  }),
+  appointments: many(appointments),
+}));
+
 /**
  * Tabela de atendimentos
  */
 export const appointments = mysqlTable("appointments", {
   id: int("id").autoincrement().primaryKey(),
-  barberId: int("barberId").notNull(),
-  haircutId: int("haircutId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
+  barberId: int("barberId").notNull().references(() => barbers.id, { onDelete: "cascade" }),
+  haircutId: int("haircutId").notNull().references(() => haircuts.id, { onDelete: "cascade" }),
   appointmentDate: timestamp("appointmentDate").notNull(), // Data e hora do atendimento
   pricePaid: int("pricePaid").notNull(), // Valor pago em centavos
   notes: text("notes"), // Observações sobre o atendimento
@@ -73,3 +101,18 @@ export const appointments = mysqlTable("appointments", {
 
 export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = typeof appointments.$inferInsert;
+
+export const appointmentRelations = relations(appointments, ({ one }) => ({
+  user: one(users, {
+    fields: [appointments.userId],
+    references: [users.id],
+  }),
+  barber: one(barbers, {
+    fields: [appointments.barberId],
+    references: [barbers.id],
+  }),
+  haircut: one(haircuts, {
+    fields: [appointments.haircutId],
+    references: [haircuts.id],
+  }),
+}));

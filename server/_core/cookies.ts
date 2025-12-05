@@ -1,4 +1,4 @@
-import type { CookieOptions, Request } from "express";
+import type { CookieOptions, Request, Response } from "express";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -19,6 +19,20 @@ function isSecureRequest(req: Request) {
     : forwardedProto.split(",");
 
   return protoList.some(proto => proto.trim().toLowerCase() === "https");
+}
+
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { sdk } from "./sdk";
+import type { CookieOptions, Request, Response } from "express";
+
+export async function setSessionCookie(req: Request, res: Response, userId: string) {
+  const sessionToken = await sdk.createSessionToken(userId);
+  const cookieOptions = getSessionCookieOptions(req);
+  
+  res.cookie(COOKIE_NAME, sessionToken, {
+    ...cookieOptions,
+    maxAge: ONE_YEAR_MS,
+  });
 }
 
 export function getSessionCookieOptions(

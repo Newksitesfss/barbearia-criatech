@@ -1,6 +1,7 @@
 import { and, between, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { appointments, barbers, haircuts, InsertAppointment, InsertBarber, InsertHaircut, InsertUser, users } from "../drizzle/schema";
+import { appointments, barbers, haircuts, InsertAppointment, InsertBarber, InsertHaircut, InsertUser, users, User } from "../drizzle/schema";
+import { generateSalt, hashPassword } from "./utils/auth";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,117 +90,181 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+
+
+
+export async function createUser(data: Omit<InsertUser, "id" | "openId" | "role" | "createdAt" | "updatedAt" | "lastSignedIn"> & { password: string }): Promise<User> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const salt = generateSalt();
+  const passwordHash = await hashPassword(data.password, salt);
+
+  const [result] = await db.insert(users).values({
+    name: data.name,
+    email: data.email,
+    passwordHash,
+    salt,
+    loginMethod: "local",
+    role: "user",
+  });
+
+  const createdUser = await db.select().from(users).where(eq(users.id, result.insertId)).limit(1);
+  if (!createdUser[0]) throw new Error("Failed to retrieve created user");
+
+  return createdUser[0];
+}
+
 // ===== BARBEIROS =====
 
-export async function createBarber(data: InsertBarber) {
+export async function createBarber(userId: number, data: Omit<InsertBarber, "userId">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(barbers).values(data);
+  const result = await db.insert(barbers).values({ ...data, userId });
   return result;
 }
 
-export async function listBarbers(activeOnly = false) {
+export async function listBarbers(userId: number, activeOnly = false) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const query = activeOnly 
-    ? db.select().from(barbers).where(eq(barbers.active, 1)).orderBy(desc(barbers.createdAt))
-    : db.select().from(barbers).orderBy(desc(barbers.createdAt));
+  const conditions = [eq(barbers.userId, userId)];
+  if (activeOnly) {
+    conditions.push(eq(barbers.active, 1));
+  }
+
+  const query = db.select().from(barbers).where(and(...conditions)).orderBy(desc(barbers.createdAt));
   
   return await query;
 }
 
-export async function getBarberById(id: number) {
+export async function getBarberById(userId: number, id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.select().from(barbers).where(eq(barbers.id, id)).limit(1);
+  const result = await db.select().from(barbers).where(and(eq(barbers.id, id), eq(barbers.userId, userId))).limit(1);
   return result[0];
 }
 
-export async function updateBarber(id: number, data: Partial<InsertBarber>) {
+export async function updateBarber(userId: number, id: number, data: Partial<Omit<InsertBarber, "userId">>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.update(barbers).set(data).where(eq(barbers.id, id));
+  await db.update(barbers).set(data).where(and(eq(barbers.id, id), eq(barbers.userId, userId)));
 }
 
-export async function toggleBarberActive(id: number, active: number) {
+export async function toggleBarberActive(userId: number, id: number, active: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.update(barbers).set({ active }).where(eq(barbers.id, id));
+  await db.update(barbers).set({ active }).where(and(eq(barbers.id, id), eq(barbers.userId, userId)));
 }
 
-export async function deleteBarber(id: number) {
+export async function deleteBarber(userId: number, id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.delete(barbers).where(eq(barbers.id, id));
+  await db.delete(barbers).where(and(eq(barbers.id, id), eq(barbers.userId, userId)));
+}
+
+export async function updateUser(id: number, data: Partial<InsertUser>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(users).set(data).where(eq(users.id, id));
 }
 
 // ===== CORTES =====
 
-export async function createHaircut(data: InsertHaircut) {
+export async function createHaircut(userId: number, data: Omit<InsertHaircut, "userId">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(haircuts).values(data);
+  const result = await db.insert(haircuts).values({ ...data, userId });
   return result;
 }
 
-export async function listHaircuts(activeOnly = false) {
+export async function listHaircuts(userId: number, activeOnly = false) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const query = activeOnly 
-    ? db.select().from(haircuts).where(eq(haircuts.active, 1)).orderBy(desc(haircuts.createdAt))
-    : db.select().from(haircuts).orderBy(desc(haircuts.createdAt));
+  const conditions = [eq(haircuts.userId, userId)];
+  if (activeOnly) {
+    conditions.push(eq(haircuts.active, 1));
+  }
+
+  const query = db.select().from(haircuts).where(and(...conditions)).orderBy(desc(haircuts.createdAt));
   
   return await query;
 }
 
-export async function getHaircutById(id: number) {
+export async function getHaircutById(userId: number, id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.select().from(haircuts).where(eq(haircuts.id, id)).limit(1);
+  const result = await db.select().from(haircuts).where(and(eq(haircuts.id, id), eq(haircuts.userId, userId))).limit(1);
   return result[0];
 }
 
-export async function updateHaircut(id: number, data: Partial<InsertHaircut>) {
+export async function updateHaircut(userId: number, id: number, data: Partial<Omit<InsertHaircut, "userId">>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.update(haircuts).set(data).where(eq(haircuts.id, id));
+  await db.update(haircuts).set(data).where(and(eq(haircuts.id, id), eq(haircuts.userId, userId)));
 }
 
-export async function toggleHaircutActive(id: number, active: number) {
+export async function toggleHaircutActive(userId: number, id: number, active: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.update(haircuts).set({ active }).where(eq(haircuts.id, id));
+  await db.update(haircuts).set({ active }).where(and(eq(haircuts.id, id), eq(haircuts.userId, userId)));
 }
 
-export async function deleteHaircut(id: number) {
+export async function deleteHaircut(userId: number, id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.delete(haircuts).where(eq(haircuts.id, id));
+  await db.delete(haircuts).where(and(eq(haircuts.id, id), eq(haircuts.userId, userId)));
 }
 
 // ===== ATENDIMENTOS =====
 
-export async function createAppointment(data: InsertAppointment) {
+export async function createAppointment(userId: number, data: Omit<InsertAppointment, "userId">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(appointments).values(data);
+  const result = await db.insert(appointments).values({ ...data, userId });
   return result;
 }
 
-export async function listAppointments(filters?: {
+export async function listAppointments(userId: number, filters?: {
   startDate?: Date;
   endDate?: Date;
   barberId?: number;
@@ -208,6 +273,20 @@ export async function listAppointments(filters?: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  const conditions = [eq(appointments.userId, userId)];
+
+  if (filters?.startDate && filters?.endDate) {
+    conditions.push(between(appointments.appointmentDate, filters.startDate, filters.endDate));
+  }
+  
+  if (filters?.barberId) {
+    conditions.push(eq(appointments.barberId, filters.barberId));
+  }
+  
+  if (filters?.haircutId) {
+    conditions.push(eq(appointments.haircutId, filters.haircutId));
+  }
+
   let query = db
     .select({
       id: appointments.id,
@@ -221,56 +300,39 @@ export async function listAppointments(filters?: {
       haircutName: haircuts.name,
     })
     .from(appointments)
-    .leftJoin(barbers, eq(appointments.barberId, barbers.id))
-    .leftJoin(haircuts, eq(appointments.haircutId, haircuts.id))
+    .leftJoin(barbers, and(eq(appointments.barberId, barbers.id), eq(barbers.userId, userId)))
+    .leftJoin(haircuts, and(eq(appointments.haircutId, haircuts.id), eq(haircuts.userId, userId)))
+    .where(and(...conditions))
     .orderBy(desc(appointments.appointmentDate));
-  
-  const conditions = [];
-  
-  if (filters?.startDate && filters?.endDate) {
-    conditions.push(between(appointments.appointmentDate, filters.startDate, filters.endDate));
-  }
-  
-  if (filters?.barberId) {
-    conditions.push(eq(appointments.barberId, filters.barberId));
-  }
-  
-  if (filters?.haircutId) {
-    conditions.push(eq(appointments.haircutId, filters.haircutId));
-  }
-  
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as typeof query;
-  }
   
   return await query;
 }
 
-export async function getAppointmentById(id: number) {
+export async function getAppointmentById(userId: number, id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
+  const result = await db.select().from(appointments).where(and(eq(appointments.id, id), eq(appointments.userId, userId))).limit(1);
   return result[0];
 }
 
-export async function updateAppointment(id: number, data: Partial<InsertAppointment>) {
+export async function updateAppointment(userId: number, id: number, data: Partial<Omit<InsertAppointment, "userId">>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.update(appointments).set(data).where(eq(appointments.id, id));
+  await db.update(appointments).set(data).where(and(eq(appointments.id, id), eq(appointments.userId, userId)));
 }
 
-export async function deleteAppointment(id: number) {
+export async function deleteAppointment(userId: number, id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.delete(appointments).where(eq(appointments.id, id));
+  await db.delete(appointments).where(and(eq(appointments.id, id), eq(appointments.userId, userId)));
 }
 
 // ===== ESTATÍSTICAS =====
 
-export async function getDailyStats(date: Date) {
+export async function getDailyStats(userId: number, date: Date) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -280,6 +342,9 @@ export async function getDailyStats(date: Date) {
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
   
+  const dateCondition = between(appointments.appointmentDate, startOfDay, endOfDay);
+  const userCondition = eq(appointments.userId, userId);
+
   // Total de atendimentos e receita do dia
   const dailyTotals = await db
     .select({
@@ -287,7 +352,7 @@ export async function getDailyStats(date: Date) {
       totalRevenue: sql<number>`SUM(${appointments.pricePaid})`,
     })
     .from(appointments)
-    .where(between(appointments.appointmentDate, startOfDay, endOfDay));
+    .where(and(dateCondition, userCondition));
   
   // Cortes mais realizados no dia
   const topHaircuts = await db
@@ -298,7 +363,7 @@ export async function getDailyStats(date: Date) {
     })
     .from(appointments)
     .leftJoin(haircuts, eq(appointments.haircutId, haircuts.id))
-    .where(between(appointments.appointmentDate, startOfDay, endOfDay))
+    .where(and(dateCondition, userCondition))
     .groupBy(appointments.haircutId, haircuts.name)
     .orderBy(desc(sql`COUNT(*)`));
   
@@ -309,13 +374,16 @@ export async function getDailyStats(date: Date) {
   };
 }
 
-export async function getMonthlyStats(year: number, month: number) {
+export async function getMonthlyStats(userId: number, year: number, month: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
   
+  const dateCondition = between(appointments.appointmentDate, startOfMonth, endOfMonth);
+  const userCondition = eq(appointments.userId, userId);
+
   // Total de atendimentos e receita do mês
   const monthlyTotals = await db
     .select({
@@ -323,7 +391,7 @@ export async function getMonthlyStats(year: number, month: number) {
       totalRevenue: sql<number>`SUM(${appointments.pricePaid})`,
     })
     .from(appointments)
-    .where(between(appointments.appointmentDate, startOfMonth, endOfMonth));
+    .where(and(dateCondition, userCondition));
   
   // Evolução diária de atendimentos no mês
   const dailyEvolutionRaw: any = await db.execute(sql`
@@ -332,7 +400,7 @@ export async function getMonthlyStats(year: number, month: number) {
       COUNT(*) as count,
       SUM(pricePaid) as revenue
     FROM appointments
-    WHERE appointmentDate BETWEEN ${startOfMonth} AND ${endOfMonth}
+    WHERE appointmentDate BETWEEN ${startOfMonth} AND ${endOfMonth} AND userId = ${userId}
     GROUP BY DATE(appointmentDate)
     ORDER BY DATE(appointmentDate)
   `);
@@ -353,7 +421,7 @@ export async function getMonthlyStats(year: number, month: number) {
     })
     .from(appointments)
     .leftJoin(barbers, eq(appointments.barberId, barbers.id))
-    .where(between(appointments.appointmentDate, startOfMonth, endOfMonth))
+    .where(and(dateCondition, userCondition))
     .groupBy(appointments.barberId, barbers.name)
     .orderBy(desc(sql`COUNT(*)`));
   
