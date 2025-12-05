@@ -7,7 +7,7 @@ services:
     name: barbearia-criatech-api
     env: node
     # O comando de build executa o build do frontend (vite build) e do backend (esbuild)
-    buildCommand: pnpm install && pnpm build
+
     # O comando de inicialização executa o servidor Node.js
     startCommand: pnpm start
     # O diretório raiz do projeto é onde o render.yaml está
@@ -43,12 +43,8 @@ services:
   # 2. Serviço Estático (Frontend)
   - type: static
     name: barbearia-criatech-web
-    # O buildCommand já foi executado no serviço web, mas é bom ter aqui para garantir
-    # No entanto, como o build do frontend está no buildCommand do serviço web,
-    # vamos apenas apontar para o diretório de saída.
-    # O Render precisa que o build seja executado para o Static Site, então vamos duplicar o comando de build
-    # e garantir que o diretório de saída seja o correto.
-    buildCommand: pnpm install && pnpm build
+    # O buildCommand não é necessário aqui, pois o Web Service já executa o build completo.
+
     # O diretório de publicação é o diretório onde o Vite coloca os arquivos estáticos
     publishPath: dist/public
     # O serviço estático precisa saber onde encontrar a API
