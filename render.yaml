@@ -24,17 +24,7 @@ services:
       # O Render injeta a porta automaticamente na variável PORT
       - key: PORT
         value: 10000 # Valor padrão, será sobrescrito pelo Render
-      # Variáveis de ambiente necessárias para o OAuth (devem ser configuradas no Render)
-      - key: OAUTH_SERVER_URL
-        value: SEU_OAUTH_SERVER_URL # Substitua pelo valor real no Render
-      - key: OAUTH_CLIENT_ID
-        value: SEU_OAUTH_CLIENT_ID # Substitua pelo valor real no Render
-      - key: OAUTH_CLIENT_SECRET
-        value: SEU_OAUTH_CLIENT_SECRET # Substitua pelo valor real no Render
-      - key: OAUTH_REDIRECT_URI
-        value: SEU_OAUTH_REDIRECT_URI # Substitua pelo valor real no Render
-      - key: OWNER_OPEN_ID
-        value: SEU_OWNER_OPEN_ID # Substitua pelo valor real no Render
+
       - key: S3_ENDPOINT
         value: SEU_S3_ENDPOINT # Substitua pelo valor real no Render
       - key: S3_ACCESS_KEY_ID
