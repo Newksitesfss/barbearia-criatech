@@ -1,26 +1,12 @@
 {
   "version": "7",
-  "dialect": "mysql",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1764964340063,
-      "tag": "0000_material_ulik",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1764964552123,
-      "tag": "0001_wandering_grandmaster",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1764967274768,
-      "tag": "0002_outgoing_landau",
+      "version": "7",
+      "when": 1764972837469,
+      "tag": "0000_quiet_strong_guy",
       "breakpoints": true
     }
   ]

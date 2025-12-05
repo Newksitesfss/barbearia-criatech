@@ -1,17 +1,19 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
+import { integer, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+
+export const roleEnum = pgEnum("user_role", ["user", "admin"]);
 
 /**
  * Core user table backing auth flow.
  * Extend this file with additional tables as your product grows.
  * Columns use camelCase to match both database fields and generated types.
  */
-export const users = mysqlTable("users", {
+export const users = pgTable("users", {
   /**
    * Surrogate primary key. Auto-incremented numeric value managed by the database.
    * Use this for relations between tables.
    */
-  id: int("id").autoincrement().primaryKey(),
+  id: serial("id").primaryKey(),
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).unique(), // Tornando opcional para permitir login local
   passwordHash: varchar("passwordHash", { length: 255 }),
@@ -19,9 +21,9 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: roleEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -37,15 +39,15 @@ export const userRelations = relations(users, ({ many }) => ({
 /**
  * Tabela de barbeiros
  */
-export const barbers = mysqlTable("barbers", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
+export const barbers = pgTable("barbers", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 320 }),
-  active: int("active").default(1).notNull(), // 1 = ativo, 0 = inativo
+  active: integer("active").default(1).notNull(), // 1 = ativo, 0 = inativo
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Barber = typeof barbers.$inferSelect;
@@ -62,15 +64,15 @@ export const barberRelations = relations(barbers, ({ one, many }) => ({
 /**
  * Tabela de tipos de cortes
  */
-export const haircuts = mysqlTable("haircuts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
+export const haircuts = pgTable("haircuts", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
   name: varchar("name", { length: 255 }).notNull(),
-  price: int("price").notNull(), // Preço em centavos para evitar problemas com decimais
+  price: integer("price").notNull(), // Preço em centavos para evitar problemas com decimais
   description: text("description"),
-  active: int("active").default(1).notNull(), // 1 = ativo, 0 = inativo
+  active: integer("active").default(1).notNull(), // 1 = ativo, 0 = inativo
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Haircut = typeof haircuts.$inferSelect;
@@ -87,16 +89,16 @@ export const haircutRelations = relations(haircuts, ({ one, many }) => ({
 /**
  * Tabela de atendimentos
  */
-export const appointments = mysqlTable("appointments", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
-  barberId: int("barberId").notNull().references(() => barbers.id, { onDelete: "cascade" }),
-  haircutId: int("haircutId").notNull().references(() => haircuts.id, { onDelete: "cascade" }),
+export const appointments = pgTable("appointments", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }), // Chave estrangeira para o usuário proprietário
+  barberId: integer("barberId").notNull().references(() => barbers.id, { onDelete: "cascade" }),
+  haircutId: integer("haircutId").notNull().references(() => haircuts.id, { onDelete: "cascade" }),
   appointmentDate: timestamp("appointmentDate").notNull(), // Data e hora do atendimento
-  pricePaid: int("pricePaid").notNull(), // Valor pago em centavos
+  pricePaid: integer("pricePaid").notNull(), // Valor pago em centavos
   notes: text("notes"), // Observações sobre o atendimento
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Appointment = typeof appointments.$inferSelect;

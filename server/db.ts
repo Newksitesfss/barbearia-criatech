@@ -1,5 +1,5 @@
 import { and, between, desc, eq, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { appointments, barbers, haircuts, InsertAppointment, InsertBarber, InsertHaircut, InsertUser, users, User } from "../drizzle/schema";
 import { generateSalt, hashPassword } from "./utils/auth";
 import { ENV } from './_core/env';
@@ -10,7 +10,9 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const { Pool } = await import('pg');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      _db = drizzle(pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
