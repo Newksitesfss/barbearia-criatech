@@ -147,14 +147,14 @@ export default function Barbers() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsDialogOpen(false)}
-                    className="flex-1"
+                    className="flex-1 text-sm"
                   >
                     Cancelar
                   </Button>
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
-                    className="flex-1"
+                    className="flex-1 text-sm"
                   >
                     {(createMutation.isPending || updateMutation.isPending) && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

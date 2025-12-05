@@ -59,3 +59,10 @@
 - [x] Adicionar opção de deletar barbeiros
 - [x] Adicionar opção de deletar tipos de cortes
 - [x] Adicionar confirmação antes de deletar itens
+
+## Responsividade Mobile
+- [ ] Otimizar layout das páginas para telas pequenas
+- [ ] Ajustar tamanho de botões e inputs para toque
+- [ ] Melhorar visualização de tabelas em mobile (cards ou scroll)
+- [ ] Otimizar formulários para mobile
+- [ ] Testar em diferentes resoluções de celular
