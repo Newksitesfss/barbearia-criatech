@@ -52,5 +52,10 @@
 - [x] Testar responsividade em diferentes dispositivos
 
 ## Deploy
-- [ ] Criar checkpoint final do projeto
-- [ ] Fornecer URL de acesso ao sistema
+- [x] Criar checkpoint final do projeto
+- [x] Fornecer URL de acesso ao sistema
+
+## Melhorias Solicitadas
+- [x] Adicionar opção de deletar barbeiros
+- [x] Adicionar opção de deletar tipos de cortes
+- [x] Adicionar confirmação antes de deletar itens

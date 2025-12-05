@@ -67,6 +67,14 @@ export const appRouter = router({
         await toggleBarberActive(input.id, input.active);
         return { success: true };
       }),
+    
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { deleteBarber } = await import("./db");
+        await deleteBarber(input.id);
+        return { success: true };
+      }),
   }),
 
   // Cortes
@@ -116,6 +124,14 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const { toggleHaircutActive } = await import("./db");
         await toggleHaircutActive(input.id, input.active);
+        return { success: true };
+      }),
+    
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { deleteHaircut } = await import("./db");
+        await deleteHaircut(input.id);
         return { success: true };
       }),
   }),

@@ -7,13 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Loader2, Plus, Edit, Power } from "lucide-react";
+import { Loader2, Plus, Edit, Power, Trash2 } from "lucide-react";
 
 export default function Haircuts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHaircut, setEditingHaircut] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", price: "", description: "" });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [haircutToDelete, setHaircutToDelete] = useState<any>(null);
 
   const utils = trpc.useUtils();
   const { data: haircuts, isLoading } = trpc.haircuts.list.useQuery();
@@ -47,6 +50,18 @@ export default function Haircuts() {
     onSuccess: () => {
       toast.success("Status atualizado!");
       utils.haircuts.list.invalidate();
+    },
+  });
+
+  const deleteMutation = trpc.haircuts.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Corte deletado com sucesso!");
+      utils.haircuts.list.invalidate();
+      setDeleteDialogOpen(false);
+      setHaircutToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao deletar: ${error.message}`);
     },
   });
 
@@ -242,6 +257,16 @@ export default function Haircuts() {
                           >
                             <Power className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              setHaircutToDelete(haircut);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -251,6 +276,31 @@ export default function Haircuts() {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja deletar o corte <strong>{haircutToDelete?.name}</strong>? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (haircutToDelete) {
+                    deleteMutation.mutate({ id: haircutToDelete.id });
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Deletar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

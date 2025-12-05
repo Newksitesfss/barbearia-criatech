@@ -132,6 +132,13 @@ export async function toggleBarberActive(id: number, active: number) {
   await db.update(barbers).set({ active }).where(eq(barbers.id, id));
 }
 
+export async function deleteBarber(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(barbers).where(eq(barbers.id, id));
+}
+
 // ===== CORTES =====
 
 export async function createHaircut(data: InsertHaircut) {
@@ -173,6 +180,13 @@ export async function toggleHaircutActive(id: number, active: number) {
   if (!db) throw new Error("Database not available");
   
   await db.update(haircuts).set({ active }).where(eq(haircuts.id, id));
+}
+
+export async function deleteHaircut(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(haircuts).where(eq(haircuts.id, id));
 }
 
 // ===== ATENDIMENTOS =====

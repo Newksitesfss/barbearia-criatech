@@ -6,13 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Loader2, Plus, Edit, Power } from "lucide-react";
+import { Loader2, Plus, Edit, Power, Trash2 } from "lucide-react";
 
 export default function Barbers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", phone: "", email: "" });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [barberToDelete, setBarberToDelete] = useState<any>(null);
 
   const utils = trpc.useUtils();
   const { data: barbers, isLoading } = trpc.barbers.list.useQuery();
@@ -46,6 +49,18 @@ export default function Barbers() {
     onSuccess: () => {
       toast.success("Status atualizado!");
       utils.barbers.list.invalidate();
+    },
+  });
+
+  const deleteMutation = trpc.barbers.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Barbeiro deletado com sucesso!");
+      utils.barbers.list.invalidate();
+      setDeleteDialogOpen(false);
+      setBarberToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao deletar: ${error.message}`);
     },
   });
 
@@ -215,6 +230,16 @@ export default function Barbers() {
                           >
                             <Power className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              setBarberToDelete(barber);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -224,6 +249,31 @@ export default function Barbers() {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja deletar o barbeiro <strong>{barberToDelete?.name}</strong>? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (barberToDelete) {
+                    deleteMutation.mutate({ id: barberToDelete.id });
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Deletar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
