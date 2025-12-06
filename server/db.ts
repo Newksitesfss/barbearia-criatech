@@ -80,7 +80,7 @@ export async function createBarber(userId: number, data: Omit<InsertBarber, "use
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(barbers).values({ ...data, userId });
+  const result = await db.insert(barbers).values({ ...data, userId, active: 1, createdAt: new Date(), updatedAt: new Date() });
   return result;
 }
 
